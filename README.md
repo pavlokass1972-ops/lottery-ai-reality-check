@@ -75,7 +75,7 @@ One finding survived everything: a set of number groups with a real, static, non
 | Best "AI" tested above | 1.058 | 0.063 | 0.000 |
 | Theoretical random (pool of 8) | 0.980 | 0.022 | 0.001 |
 
-It beats every neural network and heuristic I tested. It's simple enough to run in a spreadsheet — see `scripts/combined_5plus3.py`.
+It beats every neural network and heuristic I tested. It's simple enough to run in a spreadsheet — see `combined_5plus3.py`.
 
 **Now the part every "AI lottery" repo conveniently leaves out of the README:**
 
@@ -92,10 +92,10 @@ The honest reason this is worth publishing isn't "I found a way to beat the lott
 
 - `research_log.md` — full log of all 90 tested hypotheses, methods, and results
 - `methods_registry.md` — registry of every distinct statistical mechanism tried, to prevent re-testing the same idea with different labels
-- `data/` — the underlying draw history
-- `scripts/uk49s_algorithm.py` — the thread-scoring core model
-- `scripts/combined_5plus3.py` — the actual 5+3 combined method (core + independent analog-search complement) used for the results in Part 3
-- `scripts/lstm_baseline.py` — the LSTM reimplementation from Part 1
-- `scripts/heuristic_baselines.py` — the hot-numbers and Markov-chain baselines from Part 1
+- the CSV file — the underlying draw history
+- `uk49s_algorithm.py` — the thread-scoring core model
+- `combined_5plus3.py` — the actual 5+3 combined method (core + independent analog-search complement) used for the results in Part 3
+- `lstm_baseline.py` — the LSTM reimplementation from Part 1
+- `heuristic_baselines.py` — the hot-numbers and Markov-chain baselines from Part 1
 
 Contributions, replications, and — especially — attempts to break the one surviving finding are welcome.
