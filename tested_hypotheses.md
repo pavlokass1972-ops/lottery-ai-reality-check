@@ -1,264 +1,251 @@
-- [Цикл дослідження UK49s
+# Short list of tested hypotheses (for a quick duplicate check)
+
+Full details for each — in `research_log.md`. This file is only for
+quickly scanning "has this already been tested" before generating a
+new hypothesis.
 
-Проведи чергове дослідження
+- [2026-09-10] C6 "fat start" — CONFIRMED (shelved, narrow window)
+- [2026-09-10] C3-K10 positional pattern (odd days) — partially CONFIRMED (shelved)
+- [2026-09-10] Consensus signal (threads ∩ analog) — CONFIRMED (tied to turbulence)
+- [2026-09-10] C2 turbulence, local vs. systemic — CONFIRMED (local)
+- [2026-09-10] Dynamic consensus trigger — REJECTED
+- [2026-09-10] slow_balance_monitor wired into the score — REJECTED
+- [2026-09-10] Optimal core/complement split (1..7) — REJECTED, "5+3 best"
+- [2026-09-10] Thread pool of 5 vs. 8 — INCONCLUSIVE
+- [2026-09-10] Compensation effect of the complement when the core fails — CONFIRMED
+- [2026-09-10] Compositional null model, C2-C6 correlation — CONFIRMED (after fixing the method)
+- [2026-09-10] Compression (0101) of the whole board — REJECTED
+- [2026-09-10] Correlation dimension (chaos) of C3 — REJECTED
+- [2026-09-10] Moran's I, individual draws — REJECTED
+- [2026-09-10] Moran's I, aggregated frequency — REJECTED
+- [2026-09-10] Coulomb's law (distance to C3) — REJECTED
+- [2026-09-10] Variance of group thickness (crowding/clustering) — confirmed C3, nothing new
+- [2026-09-10] Lag scan of the forecast, averaged — REJECTED
+- [2026-09-10] Lag scan, local windows — REJECTED
+- [2026-09-10] Cross-correlation of threads with each other (shadow/lag) — REJECTED
+- [2026-09-10] #20 Fat start for R4 (variant of #1 for a row group) — REJECTED
+- [2026-09-10] #21 Direct overlap of draw t and t-1 (no groups) — REJECTED
+- [2026-09-10] #22 New thread family: toroidal diagonals D1-D7, turbulence scan — REJECTED (winner unstable across windows; p=0.15 even without correction)
+- [2026-09-10] #23 New thread family: anti-diagonals AD1-AD7, hit-rate on the last 400 — REJECTED (AD4 direction consistent, but p=0.0125→0.0875 after correcting for choosing among 7, far above Bonferroni; unstable on a 300 window)
+- [2026-09-10] #24 K6→R7 across 6 documented event segments (first run of Step 6) — REJECTED (full data already NOISE-LIKE, p=0.115; only the S6 tail p=0.0175, passes neither the global nor local correction)
 
-Цикл дослідження UK49s — 2026-09-11
+**Next hypothesis number: #25**
+**n for bonferroni_note() at start: 24**
 
-Крок 1 — Контекст
+- [2026-09-11] #25 "Reserve thread" during a triple pause (C3=0 ∧ K10=0 ∧ K6=0) — REJECTED (winner R7 confounded with the already-known K6→R7 rule; raw p=0.1125, passes neither the local scan threshold nor Bonferroni)
+- [2026-09-11] #26 Draw position within the day (session effect, 1-4) — REJECTED (winner R4, spread=9.73pp, raw p=0.6457, a new analysis axis — not tested before)
 
-Прочитав tested_hypotheses.md і останні 5 записів research_log.md:
+**Next hypothesis number: #27**
+**n for bonferroni_note() at start: 26**
 
-#20 (R4 жирний старт) — REJECTED
+- [2026-09-11] #27 Pause length vs. strength of the "snap-back" (spring effect) — REJECTED (winner R7, corr=-0.174, raw p=0.1943; direction opposite to the folk theory, a new test of the "gambler's fallacy" intuition)
 
-#21 (пряме перекриття t / t-1) — REJECTED
+**Next hypothesis number: #28**
+**n for bonferroni_note() at start: 27**
 
-#22 (тороїдальні діагоналі D1-D7, турбулентність) — REJECTED
+- [2026-09-11] #28 Chi-square frequency test of individual numbers (atomic level) — REJECTED as an independent finding (statistically significant, p=0.0, but 55% of the statistic comes from group C3 alone — a confound with the already-known C3 skew, not new information)
 
-#23 (анти-діагоналі AD1-AD7, hit-rate на 400) — REJECTED
+**Next hypothesis number: #29**
+**n for bonferroni_note() at start: 28**
 
-#24 (K6→R7 крізь 6 сегментів подій) — REJECTED
+- [2026-09-11] #29 Synergy of number pairs within a draw, controlling for the marginal skew (a new "weighted null model") — REJECTED (winner (17,24), both in C3; uniform null model p=0.1367, controlled for real marginals p=0.80 — the effect is fully explained by the known C3 skew from #28, no pair synergy)
 
-Останні 5 циклів поспіль — REJECTED, останній із них (#24) уперше повністю прогнав Крок 6. Накопичується враження, що "нові родини ниток" (D/AD) і повторні перевірки відомих пар на сегментах вже вичерпані. Замість шукати ще одну нову родину — беру прямо сформульоване відкрите питання з довідки, яке досі НЕ тестувалось: "яку 'запасну' нитку моніторити під час паузи C3, K10 і K6 одночасно".
+**Next hypothesis number: #30**
+**n for bonferroni_note() at start: 29**
 
-Крок 2 — Гіпотеза #25
+- [2026-09-11] #30 Radioactive decay law (geometric distribution of pauses, "half-life") — REJECTED (winner K7, chi2=15.12, p=0.174; unstable, train=4.03/test=15.88; C3 chi2=0.676 — near-perfect memoryless decay, further closing out #28/#29)
 
-"Резервна нитка" під час потрійної паузи. У тиражах, де одночасно C3=0 ∧ K10=0 ∧ K6=0 (усі три підтверджені "якірні" групи в паузі одночасно — тобто жодне з відомих парних правил не може активуватись за звичайним механізмом), існує принаймні одна з 21 решти груп, чий hit-rate в такі тиражі суттєво (не шумово) відхиляється від її ж hit-rate в решті тиражів.
+**Next hypothesis number: #31**
+**n for bonferroni_note() at start: 30**
 
-Це не повторення жодної зі списку. Свідомо закладаю в дизайн перевірку конфаунду: умова K6=0 входить у визначення потрійної паузи, тому переможець-R7 міг би виявитись просто перевиявленням відомого правила K6→R7, а не новою знахідкою.
+- [2026-09-11] #31 Center of mass of a draw, autocorrelation (astronomy) — REJECTED (p=0.873)
+- [2026-09-11] #32 Moment of inertia of a draw, autocorrelation (physics) — REJECTED (p=0.070)
+- [2026-09-11] #33 Activation energy — instantaneous full saturation (chemistry) — INCONCLUSIVE (0 events for all 24 groups, statistic structurally degenerate at this data volume)
+- [2026-09-11] #34 Conjunction/syzygy of anchor groups (astronomy) — REJECTED (p=0.733)
+- [2026-09-11] #35 Dipole moment of a draw, autocorrelation (electrodynamics) — REJECTED (p=0.893)
+- [2026-09-11] #36 Bond length — distribution of gaps between numbers (chemistry) — REJECTED (p=0.527)
+- [2026-09-11] #37 Shannon entropy, trend over time (thermodynamics) — REJECTED (raw p=0.0125, but train/test have opposite signs, fails Bonferroni)
+- [2026-09-11] #38 Harmonic oscillator, resonant ACF lag (physics) — REJECTED (p=0.544)
+- [2026-09-11] #39 Population inversion — Boltzmann distribution (statistical physics) — REJECTED (p=0.712)
+- [2026-09-11] #40 Magnetization — Ising model (physics) — REJECTED (p=0.126)
 
-Крок 3 — Реалізація
+**Next hypothesis number: #41**
+**n for bonferroni_note() at start: 40**
 
-Використовую research_utils.py: load_draws(start_date="2026-01-27"), build_groups(), hit_series(). Для нуль-моделі пишу stat_fn = max|dev| по 21 групі (щоб null_model_check одразу враховував множинність скану). Для переможця — кастомні quarter/train-test (бо стандартні quarter_check/train_test_check рахують іншу умовну різницю, ніж ця гіпотеза).
+- [2026-09-11] #41 Hurst exponent R/S (nolds.hurst_rs, dynamical systems) — REJECTED (p=0.22)
+- [2026-09-11] #42 Lyapunov exponent (nolds.lyap_r, chaos) — REJECTED (p=0.06)
+- [2026-09-11] #43 DFA scaling exponent (nolds.dfa) — REJECTED (winner K10, raw p=0.045, fails Bonferroni; a monotonic trend across quarters — likely a DFA non-stationarity artifact, not a new effect)
+- [2026-09-11] #44 Permutation entropy (antropy.perm_entropy) — REJECTED (p=0.15)
+- [2026-09-11] #45 Higuchi fractal dimension (antropy.higuchi_fd) — REJECTED (p=0.645)
 
-Крок 4 — Протокол перевірки
+**Next hypothesis number: #46**
+**n for bonferroni_note() at start: 45**
 
-Результати:
+- [2026-09-11] #41 Gutenberg-Richter law, power-law distribution of hit-streak lengths (seismology) — REJECTED (winner K10, R²=0.9602, p=0.33; a high R² alone is not evidence without a null model)
 
-Тривала пауза: 76 з 904 тиражів (8.4%) — узгоджується з теоретичним (0.29 × 0.58 × 0.50 ≈ 8.4%)
+**Next hypothesis number: #42**
+**n for bonferroni_note() at start: 41**
 
-Скан 21 групи, топ-3 за |dev|:
+- [2026-09-11] #42 Fano factor, bunching/antibunching (quantum optics/statistical physics) — REJECTED (all 24 groups show antibunching, F<1; winner K4, p=0.823 — a structural artifact of hypergeometric sampling, not a signal)
 
-R7: during=78.9%, outside=63.5%, dev=+15.4 п.п. (максимум)
+**Next hypothesis number: #43**
+**n for bonferroni_note() at start: 42**
 
-C6: during=71.1%, outside=60.1%, dev=+11.0 п.п.
+- [2026-09-11] #43 "Clustered" draws (cluster ≥3 on the 7×7 grid) and overlap with threads — INCONCLUSIVE (winner C1, dev=-23.44pp; fully explained by grid-edge geometry — R7/K10 are also the grid's edge row; p=0.0013 after correcting for 24 groups vs. a Bonferroni threshold of 0.001163 — fails, but by a hair; stable across quartiles/train-test)
 
-R4: during=50.0%, outside=61.1%, dev=−11.1 п.п.
+**Next hypothesis number: #44**
+**n for bonferroni_note() at start: 43**
 
-Конфаунд (закладений у дизайн): переможець R7 — саме та група, яку й передбачало б відоме правило K6→R7, бо умова K6=0 — частина визначення потрійної паузи. Тобто "резервна нитка" — це не нова знахідка, а перевиявлення вже підтвердженого парного зв'язку під іншим кутом.
+- [2026-09-11] #44 "Clustered" draws — predictive value (forward test, no threads) — REJECTED (both tests noise, p=0.98/0.64; the #43 effect fully vanishes in the forward test: C1's deviation drops from -23.44 to +0.58 — confirms #43 was purely a structural fact about a single draw, not a predictor)
 
-Нуль-модель (статистика = max|dev| по 21 групі, що вже включає поправку на скан всередині): p=0.1125 (n_trials=400, seed=42), percentile=88.75, verdict=NOISE-LIKE
+**Next hypothesis number: #45**
+**n for bonferroni_note() at start: 44**
 
-4 чверті (dev R7): [+18.2, +9.5, −3.4, +21.9] — 3 з 4 додатні, Q3 випадає
+- [2026-09-11] #45 Spatial concentration of "clustered" draws on the 7×7 grid (heatmap) — explained by geometry (center 39.4% vs. edge 15.5%, a monotonic gradient with distance from center; the null model produces the same gradient within ~1.5σ) — REJECTED as a new finding
 
-Train/test (R7): train=+11.3, test=+19.9 — обидва додатні, узгоджений напрямок
+**Next hypothesis number: #46**
+**n for bonferroni_note() at start: 45**
 
-Бонферроні: adjusted_alpha=0.0020 (n=25 гіпотез загалом); 0.1125 ≫ 0.0020
+- [2026-09-11] #46 Re-check of "clustered" draws under toroidal adjacency (C1<->C7, R1<->R7) — REJECTED (C7/R1/R7 effect disappears/flips sign; C1 weakens by half to p=0.0675 NOISE-LIKE; conclusively confirms #43/#45 were a flat-grid-boundary geometric artifact)
 
-Стійкість (варіація визначення умови): з "подвійною паузою" (будь-які дві з трьох у паузі) максимум знову дає R7 з dev=+10.2 п.п., p=0.2025 — той самий патерн, слабший за модулем (менша специфічність умови дає слабший сигнал — узгоджується, не суперечить)
+**Next hypothesis number: #47**
+**n for bonferroni_note() at start: 46**
 
-Крок 5 — Запис у research_log.md
+- [2026-09-11] #47 Full protocol for cluster↔thread linkage under the torus (4 quarters + train/test) — conclusively REJECTED (all 6 anchor threads small and chaotic across quarters; the residual C1 fades to near zero: -20→-12→-11→+1 by quarter)
 
-markdown
+**Next hypothesis number: #48**
+**n for bonferroni_note() at start: 47**
 
-## [2026-09-11, автоцикл] Гіпотеза #25: "Резервна нитка" під час потрійної паузи (C3=0 ∧ K10=0 ∧ K6=0) **Гіпотеза:** У тиражах, де одночасно C3=0, K10=0 і K6=0 (усі три підтверджені "якірні" групи в паузі одночасно — тобто жодне з відомих парних правил не може активуватись за звичайним механізмом), існує принаймні одна з 21 решти груп, чий hit-rate в такі тиражі суттєво відхиляється від її ж hit-rate в решті тиражів. Це пряма перевірка відкритого питання з довідки ("яку 'запасну' нитку моніторити під час паузи C3, K10 і K6 одночасно"), яке досі не тестувалось. Дизайн свідомо враховує конфаунд: умова K6=0 входить у визначення "потрійної паузи", тому переможець-R7 міг би виявитись просто перевиявленням відомого правила K6→R7. **Метод:** anchor_hits = hit_series для C3/K10/K6; triple_pause = індекси де всі три = 0; для кожної з 21 решти груп — dev = hitrate(during) − hitrate(outside) у п.п.; скан: max|dev| по 21 групі = реальне значення статистики. null_model_check зі stat_fn = max|dev| (сканова статистика, тому нуль-модель вже включає множинність скану по 21 групі), n_trials=400, seed=42. Кастомні quarter_check і train_test_check для переможця (стандартні з research_utils.py рахують іншу умовну різницю). Дані: load_draws(start_date="2026-01-27"), n=904. **Результати перевірки:** - Тривала пауза — 76 з 904 тиражів (8.4%), узгоджується з теоретичним ~8.4% - Топ-3 скану: R7 dev=+15.4 п.п. (during=78.9%, outside=63.5%); C6 dev=+11.0 п.п.; R4 dev=−11.1 п.п. - Конфаунд: переможець R7 — очікуваний, бо K6=0 входить у визначення умови, а K6→R7 — давно підтверджене правило (довідка: +9.3...+14.3 п.п.) - Нуль-модель (max|dev| по 21): p_value=0.1125 (n_trials=400, seed=42), percentile=88.75, verdict=NOISE-LIKE - 4 чверті (dev R7): [+18.2, +9.5, −3.4, +21.9] — 3 з 4 додатні, Q3 випадає - Train/test: train=+11.3, test=+19.9 — обидва додатні, узгоджений напрямок - Поправка Бонферроні: adjusted_alpha=0.0020 (n=25 гіпотез загалом); 0.1125 ≫ 0.0020 - Стійкість (варіація умови — "подвійна пауза", будь-які дві з трьох): max знову R7, dev=+10.2 п.п., p=0.2025 — той самий патерн, слабший за модулем **ВЕРДИКТ: REJECTED** **Пояснення:** Два незалежні чинники завалили гіпотезу. (1) Формально — max|dev| = +15.4 п.п. лежить на 88.75 перцентилі нуль-розподілу (p=0.1125, сире), після Бонферроні (0.0020) тим більше. (2) Змістовно — переможець R7 конфаундований з уже відомим правилом K6→R7 (умова K6=0 — складова "потрійної паузи"), тому навіть якби p був <0.002, це було б не "нова резервна нитка", а перевиявлення відомого парного зв'язку під іншим кутом. Жодної нової групи-кандидата (крім R7) з ефектом понад шумовий рівень не знайдено. Відповідь на відкрите питання довідки: окремої "резервної нитки" для потрійної паузи, схоже, не існує — принаймні на 904 наявних тиражах її не видно.
+- [2026-09-11] #49 Methodological check of short memory windows (3-5-10 draws) for the cluster→thread forward effect — REJECTED (W=3,5: p≈0.82 pure noise; W=10: C6 p=0.022, fails Bonferroni and unstable across neighboring W)
 
-Оновлення tested_hypotheses.md
+**Next hypothesis number: #50**
+**n for bonferroni_note() at start: 49**
 
-Додано рядок:
+- [2026-09-11] #50 Motor A and Motor B (Gtablenew_v6.py, OscillationEngineV4) — both REJECTED (A: p=0.282 pure noise; B: p=0.012, stable across quarters/train-test, but fails Bonferroni by a factor of 12)
 
-text
+**Next hypothesis number: #51**
+**n for bonferroni_note() at start: 50**
 
-- [2026-09-11] #25 "Резервна нитка" під час потрійної паузи (C3=0 ∧ K10=0 ∧ K6=0) — REJECTED (переможець R7 конфаундований з відомим K6→R7; p=0.1125 сире, не проходить ні локальний скан-поріг, ні Бонферроні)
+- [2026-09-11] #51 Fix for #50: Motor A/B on the correct 905 draws + breakdown across 6 segments S1-S6 — REJECTED for both motors in all segments (closest: B/S3 p=0.014 fails the local Bonferroni ×86; A/S5 p=0.052 doesn't even clear the raw 0.05)
 
-Оновлено підсумкові рядки:
+**Next hypothesis number: #52**
+**n for bonferroni_note() at start: 51**
 
-text
+- [2026-09-11] #52 Search for a "rescue window" for weak periods of Motor A/B — REJECTED (diagnostics: window choice doesn't correlate with weakness; unconditional scan of 18 windows: winner W=200 (not short!), p=0.026, fails Bonferroni ×27, fades over time)
 
-**Наступний номер гіпотези для нумерації: #26** **n для bonferroni_note() станом на старт: 25**
+**Next hypothesis number: #53**
+**n for bonferroni_note() at start: 52**
 
-Підсумок циклу: Гіпотеза #25 (нова, з прямим посиланням на відкрите питання довідки) — REJECTED. uk49s_algorithm_v2.py не чіпав. Позначки !! УВАГА ЛЮДИНІ !! не додано, бо вердикт не CONFIRMED.
+- [2026-09-11] #53 "Winning" windows for weak segments (S1/S3/S4) of Motor A/B — conclusively REJECTED (W=270 for S1 passed all internal tests and formally Bonferroni on the full sample, but this turned out to be data leakage: on a genuinely held-out S2-S6, p=0.116, failure; the other two candidates were pure noise immediately)
 
-tested_hypotheses.md
+**Next hypothesis number: #54**
+**n for bonferroni_note() at start: 53**
 
-# Короткий список перевірених гіпотез (для швидкої перевірки на дублікат) Повні деталі кожної — у `research_log.md`. Цей файл — тільки для швидкого сканування "чи це вже перевірялось" перед генерацією нової гіпотези. - [2026-09-10] C6 жирний старт — CONFIRMED (відкладено, вузьке вікно) - [2026-09-10] C3-K10 позиційний патерн (непарні дні) — CONFIRMED частково (відкладено) - [2026-09-10] Консенсус-сигнал (нитки ∩ аналог) — CONFIRMED (прив'язаний до турбулентності) - [2026-09-10] Турбулентність C2 локальна vs системна — CONFIRMED (локальна) - [2026-09-10] Динамічний тригер консенсусу — REJECTED - [2026-09-10] slow_balance_monitor підключений до скору — REJECTED - [2026-09-10] Оптимальне ядро/доповнення розбиття (1..7) — REJECTED як "5+3 найкраще" - [2026-09-10] Пул ниток 5 vs 8 — INCONCLUSIVE - [2026-09-10] Компенсаційний ефект доповнення при провалі ядра — CONFIRMED - [2026-09-10] Композиційна нуль-модель C2-C6 кореляція — CONFIRMED (після виправлення методу) - [2026-09-10] Компресія (0101) всієї дошки — REJECTED - [2026-09-10] Кореляційна розмірність (хаос) C3 — REJECTED - [2026-09-10] Moran's I, окремі тиражі — REJECTED - [2026-09-10] Moran's I, агрегована частота — REJECTED - [2026-09-10] Закон Кулона (відстань до C3) — REJECTED - [2026-09-10] Дисперсія товщини груп (тіснява/кластеризація) — підтвердило C3, без нового - [2026-09-10] Лаговий скан прогнозу, усереднено — REJECTED - [2026-09-10] Лаговий скан, локальні вікна — REJECTED - [2026-09-10] Крос-кореляція ниток одна з одною (тінь/лаг) — REJECTED - [2026-09-10] #20 Жирний старт для R4 (варіація #1 для рядкової групи) — REJECTED - [2026-09-10] #21 Пряме перекриття тиражу t і t-1 (без груп) — REJECTED - [2026-09-10] #22 Нова родина ниток: тороїдальні діагоналі D1-D7, скан турбулентності — REJECTED (переможець нестабільний між вікнами; p=0.15 навіть без поправок) - [2026-09-10] #23 Нова родина ниток: анти-діагоналі AD1-AD7, hit-rate на останніх 400 — REJECTED (AD4 напрямок узгоджений, але p=0.0125→0.0875 після поправки на вибір з 7, ≫ Бонферроні; нестійко на вікні 300) - [2026-09-10] #24 K6->R7 крізь 6 задокументованих сегментів подій (перша перевірка Кроку 6) — REJECTED (повні дані вже NOISE-LIKE p=0.115; лише хвіст S6 p=0.0175, не проходить ні глобальну, ні локальну поправку) **Наступний номер гіпотези для нумерації: #25** **n для bonferroni_note() станом на старт: 24** 
+- [2026-09-11] #55 Short-term momentum for C3 at W=3,5,10 (burst→hit) — REJECTED (all three NOISE-LIKE: p=0.79/0.25/0.69; chaotic signs across quarters and train/test; consistent with #30 — C3 is memoryless)
 
-- [2026-09-11] #25 "Резервна нитка" під час потрійної паузи (C3=0 ∧ K10=0 ∧ K6=0) — REJECTED (переможець R7 конфаундований з відомим K6→R7; p=0.1125 сире, не проходить ні локальний скан-поріг, ні Бонферроні)
-- [2026-09-11] #26 Позиція тиражу всередині дня (сесійний ефект, 1-4) — REJECTED (переможець R4 spread=9.73 п.п., p=0.6457 сире, нова вісь аналізу — досі не тестувалась)
+**Next hypothesis number: #56**
+**n for bonferroni_note() at start: 55**
 
-**Наступний номер гіпотези для нумерації: #27**
-**n для bonferroni_note() станом на старт: 26**
-- [2026-09-11] #27 Довжина паузи vs сила повернення ("пружина") — REJECTED (переможець R7 corr=-0.174, p=0.1943 сире; напрямок протилежний народній теорії, нова перевірка "gambler's fallacy"-інтуїції)
+- [2026-09-11] #56 Combined algorithm "threads + hot numbers" (step3_combined_fixed.py) — a real effect confirmed (p=0.0000, stable 4/4 quarters), but 78.6% of its strength is just the already-known C3 skew; a naive fixed bet on C3 with no algorithm at all OUTPERFORMS the whole complex algorithm (+0.120 vs +0.099 core; +0.170 vs +0.097 final) — complexity hurts here, it doesn't help
 
-**Наступний номер гіпотези для нумерації: #28**
-**n для bonferroni_note() станом на старт: 27**
-- [2026-09-11] #28 Частотний хі-квадрат окремих чисел (атомарний рівень) — REJECTED як незалежна знахідка (статистично значуще p=0.0, але 55% статистики дає рівно група C3 — конфаунд з уже відомим C3-зсувом, не нова інформація)
+**Next hypothesis number: #57**
+**n for bonferroni_note() at start: 56**
 
-**Наступний номер гіпотези для нумерації: #29**
-**n для bonferroni_note() станом на старт: 28**
-- [2026-09-11] #29 Синергія пар чисел усередині тиражу, з контролем за маргінальним зсувом (нова "зважена нуль-модель") — REJECTED (переможець (17,24), обидва C3; уніформна нуль-модель p=0.1367, контрольована за реальними маргіналами p=0.80 — ефект повністю пояснюється відомим C3-зсувом #28, жодної синергії пари)
+- [2026-09-11] #58 FIX for #56/#57: evaluating via P(≥3)/P(≥4)/P(≥5) instead of the mean — the picture CHANGES: the complex FINAL(8) gives significantly more 4+ hits (10, p=0.006) than the naive C3(4, p=0.42); the earlier conclusion "complexity hurts" was only true for the mean metric, not for 3+/4+
 
-**Наступний номер гіпотези для нумерації: #30**
-**n для bonferroni_note() станом на старт: 29**
-- [2026-09-11] #30 Закон радіоактивного розпаду (геометричний розподіл пауз, "half-life") — REJECTED (переможець K7 chi2=15.12, p=0.174; нестабільно train=4.03/test=15.88; C3 chi2=0.676 — майже ідеальний розпад без пам'яті, додатково закриває #28/#29)
-
-**Наступний номер гіпотези для нумерації: #31**
-**n для bonferroni_note() станом на старт: 30**
-- [2026-09-11] #31 Центр мас тиражу, автокореляція (астрономія) — REJECTED (p=0.873)
-- [2026-09-11] #32 Момент інерції тиражу, автокореляція (фізика) — REJECTED (p=0.070)
-- [2026-09-11] #33 Енергія активації — миттєве повне насичення (хімія) — INCONCLUSIVE (0 подій для всіх 24 груп, статистика структурно вироджена на цьому обсязі даних)
-- [2026-09-11] #34 З'єднання/сизигія якірних груп (астрономія) — REJECTED (p=0.733)
-- [2026-09-11] #35 Дипольний момент тиражу, автокореляція (електродинаміка) — REJECTED (p=0.893)
-- [2026-09-11] #36 Довжина зв'язку — розподіл проміжків між числами (хімія) — REJECTED (p=0.527)
-- [2026-09-11] #37 Ентропія Шеннона, тренд у часі (термодинаміка) — REJECTED (p=0.0125 сире, але train/test протилежні знаки, не проходить Бонферроні)
-- [2026-09-11] #38 Гармонічний осцилятор, резонансний лаг ACF (фізика) — REJECTED (p=0.544)
-- [2026-09-11] #39 Інверсія населеності — розподіл Больцмана (стат.фізика) — REJECTED (p=0.712)
-- [2026-09-11] #40 Намагніченість — модель Ізінга (фізика) — REJECTED (p=0.126)
-
-**Наступний номер гіпотези для нумерації: #41**
-**n для bonferroni_note() станом на старт: 40**
-- [2026-09-11] #41 Показник Хёрста R/S (nolds.hurst_rs, динамічні системи) — REJECTED (p=0.22)
-- [2026-09-11] #42 Показник Ляпунова (nolds.lyap_r, хаос) — REJECTED (p=0.06)
-- [2026-09-11] #43 DFA scaling exponent (nolds.dfa) — REJECTED (переможець K10, p=0.045 сире, не проходить Бонферроні; монотонний тренд по чвертях — ймовірний артефакт нестаціонарності DFA, не новий ефект)
-- [2026-09-11] #44 Перестановочна ентропія (antropy.perm_entropy) — REJECTED (p=0.15)
-- [2026-09-11] #45 Фрактальна розмірність Хігучі (antropy.higuchi_fd) — REJECTED (p=0.645)
-
-**Наступний номер гіпотези для нумерації: #46**
-**n для bonferroni_note() станом на старт: 45**
-- [2026-09-11] #41 Закон Гутенберга-Ріхтера, степеневий розподіл довжин серій хітів (сейсмологія) — REJECTED (переможець K10 R²=0.9602, p=0.33; високий R² сам по собі не доказ без нуль-моделі)
-
-**Наступний номер гіпотези для нумерації: #42**
-**n для bonferroni_note() станом на старт: 41**
-- [2026-09-11] #42 Фактор Фано, bunching/antibunching (квантова оптика/стат.фізика) — REJECTED (усі 24 групи antibunching F<1, переможець K4, p=0.823 — структурний артефакт гіпергеометричної вибірки, не сигнал)
-
-**Наступний номер гіпотези для нумерації: #43**
-**n для bonferroni_note() станом на старт: 42**
-- [2026-09-11] #43 "Кучні" тиражі (кластер≥3 на сітці 7х7) і перетин з нитками — INCONCLUSIVE (переможець C1, dev=-23.44 п.п.; повністю пояснюється геометрією краю сітки (edge-ефект: R7/K10 теж крайній рядок 7); p=0.0013 після поправки на 24 групи vs Бонферроні 0.001163 — не проходить, але на волосину; стабільно за квартилями/train-test)
-
-**Наступний номер гіпотези для нумерації: #44**
-**n для bonferroni_note() станом на старт: 43**
-- [2026-09-11] #44 "Кучні" тиражі — предиктивна цінність (форвардний тест, без ниток) — REJECTED (обидва тести шумові p=0.98/0.64; ефект #43 повністю зникає у форвардному тесті: C1 dev падає з -23.44 до +0.58 -- підтверджує, що #43 був суто структурним фактом про один тираж, не предиктором)
-
-**Наступний номер гіпотези для нумерації: #45**
-**n для bonferroni_note() станом на старт: 44**
-- [2026-09-11] #45 Просторова концентрація "кучних" тиражів на сітці 7х7 (теплова карта) — пояснено геометрією (центр 39.4% vs край 15.5%, монотонний градієнт за відстанню від центру; нуль-модель дає той самий градієнт у межах ~1.5σ) — REJECTED як нова знахідка
-
-**Наступний номер гіпотези для нумерації: #46**
-**n для bonferroni_note() станом на старт: 45**
-- [2026-09-11] #46 Повторна перевірка "кучних" тиражів під тороїдальним сусідством (C1<->C7, R1<->R7) — REJECTED (C7/R1/R7 ефект зник/змінив знак; C1 ослаб удвічі до p=0.0675 NOISE-LIKE; остаточно підтверджує, що #43/#45 були геометричним артефактом плоскої межі сітки)
-
-**Наступний номер гіпотези для нумерації: #47**
-**n для bonferroni_note() станом на старт: 46**
-- [2026-09-11] #47 Повний протокол зв'язку кластер↔нитки під торусом (4 чверті+train/test) — REJECTED остаточно (усі 6 якірних ниток малі й хаотичні за чвертями; залишковий C1 згасає до майже нуля: -20→-12→-11→+1 по чвертях)
-
-**Наступний номер гіпотези для нумерації: #48**
-**n для bonferroni_note() станом на старт: 47**
-- [2026-09-11] #49 Методологічна перевірка коротких вікон пам'яті (3-5-10 тиражів) для кластер→нитка forward-ефекту — REJECTED (W=3,5: p≈0.82 чистий шум; W=10: C6 p=0.022, не проходить Бонферроні і нестійкий між сусідніми W)
-
-**Наступний номер гіпотези для нумерації: #50**
-**n для bonferroni_note() станом на старт: 49**
-- [2026-09-11] #50 Мотор A і Мотор Б (Gtablenew_v6.py, OscillationEngineV4) — обидва REJECTED (A: p=0.282 чистий шум; B: p=0.012, стабільно в чвертях/train-test, але не проходить Бонферроні у 12 разів)
-
-**Наступний номер гіпотези для нумерації: #51**
-**n для bonferroni_note() станом на старт: 50**
-- [2026-09-11] #51 Виправлення #50: Мотор A/Б на коректних 905 тиражах + розбивка по 6 сегментах S1-S6 — REJECTED для обох моторів у всіх сегментах (найближче: B/S3 p=0.014 не проходить локальний Бонферроні ×86; A/S5 p=0.052 не долає навіть сирий 0.05)
-
-**Наступний номер гіпотези для нумерації: #52**
-**n для bonferroni_note() станом на старт: 51**
-- [2026-09-11] #52 Пошук вікна-рятівника для слабких періодів Мотор A/Б — REJECTED (діагностика: вибір вікна не корелює зі слабкістю; безумовний скан 18 W: переможець W=200 (не короткий!), p=0.026, не проходить Бонферроні ×27, згасає в часі)
-
-**Наступний номер гіпотези для нумерації: #53**
-**n для bonferroni_note() станом на старт: 52**
-- [2026-09-11] #53 Вікна-переможці для слабких сегментів (S1/S3/S4) Мотор A/Б — REJECTED остаточно (W=270 для S1 пройшов усі внутрішні тести і формально Бонферроні на повній вибірці, але це виявилось витоком даних: на чесному held-out S2-S6 p=0.116, провал; інші два кандидати — чистий шум одразу)
-
-**Наступний номер гіпотези для нумерації: #54**
-**n для bonferroni_note() станом на старт: 53**
-- [2026-09-11] #55 Короткострокова інерція (momentum) C3 на W=3,5,10 (burst->hit) — REJECTED (усі три NOISE-LIKE: p=0.79/0.25/0.69; хаотичні знаки по чвертях і train/test; узгоджується з #30 — C3 безпам'ятна)
-
-**Наступний номер гіпотези для нумерації: #56**
-**n для bonferroni_note() станом на старт: 55**
-- [2026-09-11] #56 Комбінований алгоритм "нитки+гарячі числа" (step3_combined_fixed.py) — реальний ефект підтверджено (p=0.0000, стабільно 4/4 чверті), але 78.6% сили = вже відомий C3-зсув; наївна фіксована ставка на C3 без жодного алгоритму ПЕРЕВЕРШУЄ весь складний алгоритм (+0.120 vs +0.099 ядро; +0.170 vs +0.097 фінал) — складність шкодить, не допомагає
-
-**Наступний номер гіпотези для нумерації: #57**
-**n для bonferroni_note() станом на старт: 56**
-- [2026-09-11] #58 ВИПРАВЛЕННЯ #56/#57: оцінка через P(>=3)/P(>=4)/P(>=5) замість середнього — картина ЗМІНЮЄТЬСЯ: складний ФІНАЛ(8) дає значуще більше 4+ (10, p=0.006) за наївний C3(4, p=0.42); попередній висновок "складність шкодить" був вірний лише для метрики середнього, не для 3+/4+
-
-**Наступний номер гіпотези для нумерації: #59**
-**n для bonferroni_note() станом на старт: 58**
-- [2026-09-11] #59 Повторна перевірка Мотор A/Б за P(>=3)/P(>=4)/P(>=5) — REJECTED для обох (A: навіть гірше за шанс на P>=4; B: P>=4 формально проходить Бонферроні на повній вибірці, але Q4=0, test=шум p=0.31 — усі 11 подій до 2 липня, потім 2+ місяці нуля)
-
-**Наступний номер гіпотези для нумерації: #60**
-**n для bonferroni_note() станом на старт: 59**
-- [2026-09-12] #63 Позиційна залежність C3 від номера тиража в добі (1-4) — REJECTED (розмах між позиціями p=0.92 NOISE-LIKE, менший за типовий шум; напрямок хаотичний по чвертях: поз.3→поз.1→нема лідера→поз.1)
-
-**Наступний номер гіпотези для нумерації: #64**
-**n для bonferroni_note() станом на старт: 63**
-- [2026-09-12] #64 Залежність C3 від дня тижня (Пн-Нд) — REJECTED (розмах p=0.384 NOISE-LIKE, лідируючий день хаотичний по чвертях: Вт→Ср→Сб→Пн)
-
-**Наступний номер гіпотези для нумерації: #65**
-**n для bonferroni_note() станом на старт: 64**
-- [2026-09-12] #65 Runs Test (Wald-Wolfowitz, NIST SP800-22, метод із криптографії) на hit-серії C3 — REJECTED (аналітичний p=0.798, Monte Carlo p=0.998, обидва узгоджено NOISE-LIKE; крос-підтверджує статичність C3 методом з іншої дисципліни)
-
-**Наступний номер гіпотези для нумерації: #66**
-**n для bonferroni_note() станом на старт: 65**
-- [2026-09-12] #66 Тест порядку марковського ланцюга (геноміка, likelihood-ratio G-тест) для короткострокової пам'яті C3, k=1-5 — REJECTED для всіх k (найкраще k=1: p=0.74 хі-кв / 0.77 MC; жодне не проходить навіть сирий 0.05)
-
-**Наступний номер гіпотези для нумерації: #67**
-**n для bonferroni_note() станом на старт: 66**
-- [2026-09-12] #67 Скринінг 23 ниток (без C3) x 6 вікон (3-80) на коротку forward-пам'ять — REJECTED після поправки на 138 комбінацій (найкращий кандидат K7/W=3: p=0.049 сирий, потрібно <0.00036; але 4/4 чверті й train/test одного напрямку — кандидат для окремої попередньо зареєстрованої перевірки на нових даних)
-
-**Наступний номер гіпотези для нумерації: #68**
-**n для bonferroni_note() станом на старт: 67**
-- [2026-09-12] #68 K7→K1 (запит людини "після К7 заходить К1") — REJECTED для обох формулювань (той самий тираж p=0.214; forward t->t+1 p=0.079 і напрямок ПРОТИЛЕЖНИЙ описаному в 3/4 чвертей)
-
-**Наступний номер гіпотези для нумерації: #69**
-**n для bonferroni_note() станом на старт: 68**
-- [2026-09-12] #69 ARCH-LM тест кластеризації волатильності (фінанси/GARCH) для C2 (4 вікна) + C3/C6/K10 — REJECTED усюди (найближче C2/W=10: p=0.434)
-- [2026-09-12] #70 Transfer entropy (нейронаука, лаг+1) для 6 пар ниток — REJECTED усюди; K7->K1 найближче (p=0.093), 3-й незалежний метод що не підтверджує цей зв'язок
-
-**Наступний номер гіпотези для нумерації: #71**
-**n для bonferroni_note() станом на старт: 70**
-- [2026-09-12] #71 C-score (екологія, curveball нуль-модель) K7xK1 — НЕ CONFIRMED за Бонферроні, але z=3.01, узгоджено train(z=1.85)/test(z=1.65), сегрегація — найсильніший результат сесії, кандидат на окрему перевірку
-- [2026-09-12] #72 Survival analysis / hazard rate сухих серій (C3,K7,C2,K10) — REJECTED (зростання hazard — артефакт оцінювача, p=0.276)
-- [2026-09-12] #73 Lempel-Ziv складність (C3,K7,C2,K10) — REJECTED (після виправлення бага в першій реалізації)
-- [2026-09-12] #74 Hawkes process самозбудження (K7,C3) — REJECTED (MLE дає alpha=0 для обох)
-- [2026-09-12] #75 Формальна детекція точки зламу з поправкою на множинність (C2,C3,K7,K10) — REJECTED (C2 найближче, p=0.093)
-
-**Наступний номер гіпотези для нумерації: #76**
-**n для bonferroni_note() станом на старт: 75**
-- [2026-09-12] Експеримент: лінза K7<->K1 у бектесті алгоритму — P(>=3)/P(>=4) не змінились попри 390/855 змінених пулів; практичної користі немає
-- [2026-09-12] #76 C-score на C3xK10/C2xC6/K6xR7 (крос-валідація) — усі 3 підтверджені (z=3.64/4.81/3.62)
-- [2026-09-12] #77 Бінарна сегментація (C2,C3,K7) — REJECTED (узгоджено з #75)
-- [2026-09-12] #78 RQA Determinism (C3,K7,C2,K10) — REJECTED, C2 найближче (p=0.067)
-- [2026-09-12] #79 Perron-Frobenius спектральний розрив (composite C3,K7,K1) — REJECTED (p=0.65)
-- [2026-09-12] #80 Wavelet DWT energy (C3,K7,C2,K10) — K7 НЕ CONFIRMED за глобальним Бонферроні, але p=0.001, робастно на seed/чвертях/train-test; 2-й незалежний метод що вказує на K7
-
-**Наступний номер гіпотези для нумерації: #81**
-**n для bonferroni_note() станом на старт: 80**
-- [2026-09-12] #81 C-score K7 проти 15 фізично незалежних ниток (виправлено артефакт R5/C-груп) — K4(z=3.42) і R6(z=3.25) проходять локальний Бонферроні
-- [2026-09-12] #82 Прецизійна перевірка K7xK4/K7xR6 (60 семплів+train/test) — K7xK4 проходить глобальний поріг на повних даних (z=3.78), але слабшає на test (z=1.64); K7 власний hit-rate нормальний (p=0.646). ФІНАЛЬНИЙ ВЕРДИКТ: цікавий, недостатньо стійкий, тему закрито до нових даних
-
-**Наступний номер гіпотези для нумерації: #83**
-**n для bonferroni_note() станом на старт: 82**
-- [2026-09-12] #83 K7 "пульсація" після жирного пострілу (запит людини) — REJECTED (n=11 подій, напрямок навіть протилежний на W=1,2)
-- [2026-09-12] #84 Ланцюгова реакція жирна нитка X -> жирна нитка Y інша (запит людини) — REJECTED (475 подій, p=0.65-0.73)
-- [2026-09-12] #85 Алегорія "рідина зі згустками" (потік сповільнюється/прискорюється навколо жирної події) — REJECTED, ефект суто механічний, лише в сам момент, без інерції
-- [2026-09-12] #86 Алегорія "педаль газу" (спільний режим інтенсивності з інерцією) — REJECTED (автокореляція індексу дисперсії товщини, p=0.12-0.92); 3-тя незалежна перевірка "спільного режиму" за сесію
-
-**Наступний номер гіпотези для нумерації: #87**
-**n для bonferroni_note() станом на старт: 86**
-- [2026-09-12] #87 Extremal index theta (кліматологія/EVT, алегорія погоди) для C3/K7/C2/K10/ПУЛ, з сегментами S1-S6 і малими ковзними вікнами — REJECTED на всіх рівнях деталізації; 7-ма незалежна перевірка "спільної кластеризації аномалій", теж нуль
-
-**Наступний номер гіпотези для нумерації: #88**
-**n для bonferroni_note() станом на старт: 87**
-- [2026-09-12] #88 Scan statistic (епідеміологія, Kulldorff) для K7/C3/C2/K10 і 5 пар, W=5/10/20/40, обидва напрямки (сплеск і провал) — REJECTED усюди; методологічно підтверджує, що сірий шум не ховає локальний сигнал навіть у найменших вікнах
-
-**Наступний номер гіпотези для нумерації: #89**
-**n для bonferroni_note() станом на старт: 88**
-- [2026-09-12] #89 BOCPD (Bayesian Online Change Point Detection, Adams-MacKay) для C2/C3/K7/K10 — REJECTED (K10 найближче p=0.09); виправлено баг у першій реалізації по дорозі
-
-**Наступний номер гіпотези для нумерації: #90**
-**n для bonferroni_note() станом на старт: 89**
-- [2026-09-12] #90 3 методи з GitHub (LSTM/LotteryAi-стиль, гарячі числа, Марков 1-го порядку) на 75/25 train-test — LSTM=чистий шум (P>=3 0.027, P>=4=0.000, гірше за наш алгоритм); гарячі/Марков "перевершують" лише теоретичний еталон, бо перевідкривають C3 (перекриття 4.66/7); жоден не перевершує наш алгоритм ниток (P>=3=0.0749)
-
-**Наступний номер гіпотези для нумерації: #91**
-**n для bonferroni_note() станом на старт: 90**
+**Next hypothesis number: #59**
+**n for bonferroni_note() at start: 58**
+
+- [2026-09-11] #59 Re-check of Motor A/B via P(≥3)/P(≥4)/P(≥5) — REJECTED for both (A: even worse than chance on P≥4; B: P≥4 formally passes Bonferroni on the full sample, but Q4=0, test=noise p=0.31 — all 11 events occurred before July 2, then 2+ months of zero)
+
+**Next hypothesis number: #60**
+**n for bonferroni_note() at start: 59**
+
+- [2026-09-12] #63 C3's dependence on draw position within the day (1-4) — REJECTED (spread between positions p=0.92 NOISE-LIKE, smaller than typical noise; direction chaotic across quarters: pos.3→pos.1→no leader→pos.1)
+
+**Next hypothesis number: #64**
+**n for bonferroni_note() at start: 63**
+
+- [2026-09-12] #64 C3's dependence on day of week (Mon-Sun) — REJECTED (spread p=0.384 NOISE-LIKE, leading day chaotic across quarters: Tue→Wed→Sat→Mon)
+
+**Next hypothesis number: #65**
+**n for bonferroni_note() at start: 64**
+
+- [2026-09-12] #65 Runs Test (Wald-Wolfowitz, NIST SP800-22, a cryptography method) on C3's hit series — REJECTED (analytical p=0.798, Monte Carlo p=0.998, both consistently NOISE-LIKE; cross-confirms C3's static nature via a method from a different discipline)
+
+**Next hypothesis number: #66**
+**n for bonferroni_note() at start: 65**
+
+- [2026-09-12] #66 Markov chain order test (genomics, likelihood-ratio G-test) for C3's short-term memory, k=1-5 — REJECTED for all k (best, k=1: p=0.74 chi-sq / 0.77 MC; none clears even a raw 0.05)
+
+**Next hypothesis number: #67**
+**n for bonferroni_note() at start: 66**
+
+- [2026-09-12] #67 Screening 23 threads (excluding C3) × 6 windows (3-80) for short forward memory — REJECTED after correcting for 138 combinations (best candidate K7/W=3: raw p=0.049, needs <0.00036; but 4/4 quarters and train/test agree on direction — a candidate for a separate, pre-registered check on new data)
+
+**Next hypothesis number: #68**
+**n for bonferroni_note() at start: 67**
+
+- [2026-09-12] #68 K7→K1 ("after K7, K1 shows up" — the person's own observation) — REJECTED for both formulations (same draw, p=0.214; forward t→t+1, p=0.079 and the direction is OPPOSITE to what was described, in 3/4 quarters)
+
+**Next hypothesis number: #69**
+**n for bonferroni_note() at start: 68**
+
+- [2026-09-12] #69 ARCH-LM volatility-clustering test (finance/GARCH) for C2 (4 windows) + C3/C6/K10 — REJECTED everywhere (closest: C2/W=10, p=0.434)
+- [2026-09-12] #70 Transfer entropy (neuroscience, lag+1) for 6 thread pairs — REJECTED everywhere; K7→K1 closest (p=0.093), the 3rd independent method that fails to confirm this relationship
+
+**Next hypothesis number: #71**
+**n for bonferroni_note() at start: 70**
+
+- [2026-09-12] #71 C-score (ecology, curveball null model) for K7×K1 — NOT CONFIRMED under Bonferroni, but z=3.01, consistent on train (z=1.85)/test (z=1.65), segregation — the strongest result of the session, a candidate for a dedicated follow-up
+- [2026-09-12] #72 Survival analysis / hazard rate of dry streaks (C3,K7,C2,K10) — REJECTED (the rise in hazard is an estimator artifact, p=0.276)
+- [2026-09-12] #73 Lempel-Ziv complexity (C3,K7,C2,K10) — REJECTED (after fixing a bug in the first implementation)
+- [2026-09-12] #74 Hawkes self-excitation process (K7,C3) — REJECTED (MLE gives alpha=0 for both)
+- [2026-09-12] #75 Formal change-point detection with a multiplicity correction (C2,C3,K7,K10) — REJECTED (C2 closest, p=0.093)
+
+**Next hypothesis number: #76**
+**n for bonferroni_note() at start: 75**
+
+- [2026-09-12] Experiment: the K7<->K1 lens in the algorithm backtest — P(≥3)/P(≥4) did not change despite 390/855 changed pools; no practical benefit
+- [2026-09-12] #76 C-score on C3×K10/C2×C6/K6×R7 (cross-validation) — all 3 confirmed (z=3.64/4.81/3.62)
+- [2026-09-12] #77 Binary segmentation (C2,C3,K7) — REJECTED (consistent with #75)
+- [2026-09-12] #78 RQA Determinism (C3,K7,C2,K10) — REJECTED, C2 closest (p=0.067)
+- [2026-09-12] #79 Perron-Frobenius spectral gap (composite C3,K7,K1) — REJECTED (p=0.65)
+- [2026-09-12] #80 Wavelet DWT energy (C3,K7,C2,K10) — K7 NOT CONFIRMED under global Bonferroni, but p=0.001, robust across seed/quarters/train-test; the 2nd independent method pointing at K7
+
+**Next hypothesis number: #81**
+**n for bonferroni_note() at start: 80**
+
+- [2026-09-12] #81 C-score for K7 against 15 physically independent threads (fixed the R5/C-group artifact) — K4 (z=3.42) and R6 (z=3.25) pass the local Bonferroni correction
+- [2026-09-12] #82 Precision check of K7×K4/K7×R6 (60 samples + train/test) — K7×K4 passes the global threshold on the full data (z=3.78), but weakens on test (z=1.64); K7's own hit-rate is normal (p=0.646). FINAL VERDICT: interesting, not stable enough, topic closed pending new data
+
+**Next hypothesis number: #83**
+**n for bonferroni_note() at start: 82**
+
+- [2026-09-12] #83 K7 "pulsation" after a fat shot (the person's own observation) — REJECTED (n=11 events, direction even reversed at W=1,2)
+- [2026-09-12] #84 Chain reaction, fat thread X → fat thread Y, a different one (the person's own observation) — REJECTED (475 events, p=0.65-0.73)
+- [2026-09-12] #85 The "fluid with clumps" allegory (flow slowing down/speeding up around a fat event) — REJECTED, the effect is purely mechanical, only at the exact moment, with no inertia
+- [2026-09-12] #86 The "gas pedal" allegory (a shared intensity regime with inertia) — REJECTED (autocorrelation of the thickness-variance index, p=0.12-0.92); the 3rd independent check of a "shared regime" this session
+
+**Next hypothesis number: #87**
+**n for bonferroni_note() at start: 86**
+
+- [2026-09-12] #87 Extremal index theta (climatology/EVT, the weather allegory) for C3/K7/C2/K10/POOL, with S1-S6 segments and small rolling windows — REJECTED at every level of detail; the 7th independent check of "shared clustering of anomalies," also a null result
+
+**Next hypothesis number: #88**
+**n for bonferroni_note() at start: 87**
+
+- [2026-09-12] #88 Scan statistic (epidemiology, Kulldorff) for K7/C3/C2/K10 and 5 pairs, W=5/10/20/40, both directions (burst and gap) — REJECTED everywhere; methodologically confirms that the "gray noise" isn't hiding a local signal even in the smallest windows
+
+**Next hypothesis number: #89**
+**n for bonferroni_note() at start: 88**
+
+- [2026-09-12] #89 BOCPD (Bayesian Online Change Point Detection, Adams-MacKay) for C2/C3/K7/K10 — REJECTED (K10 closest, p=0.09); fixed a bug in the first implementation along the way
+
+**Next hypothesis number: #90**
+**n for bonferroni_note() at start: 89**
+
+- [2026-09-12] #90 3 methods from GitHub (LSTM/LotteryAi-style, hot numbers, first-order Markov) on a 75/25 train-test split — LSTM is pure noise (P≥3 0.027, P≥4=0.000, worse than our algorithm); hot-numbers/Markov "beat" only the theoretical baseline, because they rediscover C3 (4.66/7 overlap); none beats our thread-based algorithm (P≥3=0.0749)
+
+**Next hypothesis number: #91**
+**n for bonferroni_note() at start: 90**
