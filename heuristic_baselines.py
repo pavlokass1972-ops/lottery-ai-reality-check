@@ -15,7 +15,7 @@ import csv
 import os
 from collections import Counter, defaultdict
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), "Uk49s_master_2021_2026.csv")
+CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "Uk49s_master_2021_2026.csv")
 TOP_N = 8
 NEW_MODE_START = "2026-01-27"
 

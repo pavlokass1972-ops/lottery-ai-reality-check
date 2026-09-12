@@ -2,26 +2,26 @@
 # -*- coding: utf-8 -*-
 
 """
-Бектест алгоритму UK49s на основі ниток — версія 2.
-База: 123.py (структура груп, GroupState, tie-breaking, гіпергеометрика).
+UK49s thread-based algorithm backtest — version 2.
+Base: 123.py (group structure, GroupState, tie-breaking, hypergeometrics).
 
-Зміни відносно 123.py:
-  1. Прибрано СТАТИЧНІ жорстко зашиті правила (C3-K10, C2-C6, K6-R7
-     назавжди). Замість цього — ЖИВА, КОВЗНА ПЕРЕКАЛІБРОВКА: кожні
-     RECALIB_STEP тиражів заново шукаються найсильніші опозитні пари
-     на вікні останніх ROLLING WINDOW тиражів. Розмір цього вікна
-     сам обирається адаптивно з CANDIDATE_WINDOWS за принципом
-     моторів A/Б (яке вікно давало кращий результат на нещодавньому
-     минулому — те й використовується).
-  2. C3_BIAS_WEIGHT за замовчуванням змінено з 2.5 на 1.0 — 2.5
-     давало кращий P(k>=3), але гірший P(k>=4) і не було оптимальним
-     на чесній другій половині даних (train/test перевірка).
-  3. Прибрано CALIBRATION_WINDOW / CALIBRATION_PERCENTILE (динамічний
-     поріг товщини) — окрема, не пов'язана й не перевірена гілка,
-     плутала з основною ідеєю. Поріг "гарячого пострілу" завжди
-     фіксований = 3.
+Changes relative to 123.py:
+  1. Removed the STATIC hardcoded rules (C3-K10, C2-C6, K6-R7 forever).
+     Replaced with LIVE, ROLLING RECALIBRATION: every RECALIB_STEP
+     draws, the strongest opposite pairs are re-searched on a window
+     of the last ROLLING WINDOW draws. The size of this window is
+     itself chosen adaptively from CANDIDATE_WINDOWS using the same
+     principle as the "Motor A/B" experiments (whichever window gave
+     the better result on the recent past is the one used).
+  2. C3_BIAS_WEIGHT default changed from 2.5 to 1.0 — 2.5 gave a
+     better P(k>=3) but a worse P(k>=4), and was not optimal on a
+     genuinely held-out second half of the data (train/test check).
+  3. Removed CALIBRATION_WINDOW / CALIBRATION_PERCENTILE (a dynamic
+     thickness threshold) — a separate, unrelated, unverified branch
+     that confused the main idea. The "hot shot" threshold is always
+     fixed at 3.
 
-Працює без зовнішніх бібліотек (тільки стандартний Python).
+Runs with no external dependencies (standard Python only).
 """
 
 import csv
@@ -34,66 +34,67 @@ from collections import defaultdict
 from itertools import combinations
 
 # ============================================================
-#  НАЛАШТУВАННЯ (ЗМІНЮЙТЕ ТУТ)
+#  SETTINGS (EDIT HERE)
 # ============================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(BASE_DIR, "Uk49s_master_2021_2026.csv")
 
-N_BACKTEST = 900          # кількість останніх тиражів для бектесту
-                          # (використовується лише якщо BACKTEST_ANCHOR_DATE=None)
-TOP_N = 8                # скільки чисел видавати в прогнозі
+N_BACKTEST = 900          # number of most recent draws to backtest
+                          # (used only if BACKTEST_ANCHOR_DATE=None)
+TOP_N = 8                # how many numbers to output in the prediction
 
-# --- Фіксована точка відліку бектесту (для відтворюваності) ---
-# Проблема: "останні 800 тиражів" щодня зсувається вперед, бо щодня
-# додаються нові тиражі — тому той самий N_BACKTEST=800 дає трохи
-# інший результат кожного дня (перевірено: розкид не драматичний,
-# 1.09-1.13 середньо на глибинах 700-880, але все ж не ідентичний).
-# Щоб порівнювати результати різних днів чесно "яблуко до яблука",
-# можна зафіксувати кінець бектесту на конкретній даті замість
-# "останні N тиражів від сьогодні". Якщо BACKTEST_ANCHOR_DATE=None —
-# використовується старий спосіб (N_BACKTEST від кінця файлу).
-BACKTEST_ANCHOR_DATE = None   # напр. "2026-09-04", або None
+# --- Fixed backtest anchor point (for reproducibility) ---
+# Problem: "the last 800 draws" shifts forward every day, since new
+# draws get added daily — so the same N_BACKTEST=800 gives a slightly
+# different result each day (checked: the spread isn't dramatic,
+# 1.09-1.13 average at depths 700-880, but still not identical).
+# To compare results across different days fairly, apples-to-apples,
+# the backtest end date can be pinned to a specific date instead of
+# "the last N draws from today." If BACKTEST_ANCHOR_DATE=None, the
+# old approach is used (N_BACKTEST counted back from the end of the
+# file).
+BACKTEST_ANCHOR_DATE = None   # e.g. "2026-09-04", or None
 
-# --- Фільтр нового режиму (з 27.01.2026) ---
+# --- New-regime filter (from 2026-01-27) ---
 USE_NEW_MODE_ONLY = True
 NEW_MODE_START = "2026-01-27"
 
 # --- Tie-breaking ---
 TIE_BREAKER = 'last_thickness'   # 'last_thickness', 'random', 'number'
 
-# --- Зсув ваги в бік C3 ---
-# 0.0 = без зсуву. 1.0-1.5 = помірний, підтверджений на train/test
-# зсув (кращий баланс P(k>=3) і P(k>=4), ніж 2.5).
+# --- Bias weight toward C3 ---
+# 0.0 = no bias. 1.0-1.5 = a moderate bias, confirmed on train/test
+# (a better balance of P(k>=3) and P(k>=4) than 2.5).
 C3_BIAS_WEIGHT = 1.5
 
-# --- Живий прогноз / forward-test ---
-SLOW_WINDOW = 100         # повільне вікно для монітора зсуву балансу
-                          # (окремо від швидкого RECALIB_WINDOW=10)
-SHOW_LAST_N = 10          # показати покроковий результат по останніх
-                          # N тиражах (0/1/2/3... влучань на кожен)
+# --- Live forecast / forward test ---
+SLOW_WINDOW = 100         # slow window for the balance-shift monitor
+                          # (separate from the fast RECALIB_WINDOW=10)
+SHOW_LAST_N = 10          # show a step-by-step result for the last
+                          # N draws (0/1/2/3... hits for each)
 
-# Перевірено емпірично (кілька прогонів з різними вікнами): 10 —
-# найстабільніше й найкраще вікно перекалібровки. Адаптивний вибір
-# між кількома розмірами (10/20/30/50) не додав нічого понад просте
-# фіксоване вікно=10 — тому спрощено до одного фіксованого значення.
-RECALIB_WINDOW = 10     # розмір вікна для пошуку пар щоразу заново
-LOOKBACK = 100           # (лишається для сумісності, не використовується
-                         # напряму при фіксованому вікні)
-RECALIB_STEP = 100      # як часто (раз на скільки тиражів) шукати нові правила
-N_TOP_PAIRS = 4# максимум пар, що можуть пройти поріг одночасно
-                          # (підтверджено емпірично як краще за 2 і 4)
-CORR_THRESHOLD = 0.95    # "округлення" — пара враховується лише якщо
-                          # |кореляція| > цей поріг; слабші сигнали
-                          # відкидаються повністю (може лишити 0 пар
-                          # на якийсь відрізок — це нормально і
-                          # навмисно: перевірено на бектесті, що
-                          # "нічого не ставити" краще за "поставити
-                          # на слабкий, невпевнений сигнал").
-HOT_THRESHOLD_FIXED = 3  # поріг "гарячого пострілу" (товщина в 1 тиражі)
+# Verified empirically (several runs with different windows): 10 is
+# the most stable and best recalibration window. Adaptively choosing
+# among several sizes (10/20/30/50) added nothing over a simple fixed
+# window of 10 — so this was simplified to one fixed value.
+RECALIB_WINDOW = 10     # window size for re-searching pairs each time
+LOOKBACK = 100           # (kept for compatibility, not used directly
+                         # with a fixed window)
+RECALIB_STEP = 100      # how often (once every how many draws) to search for new rules
+N_TOP_PAIRS = 4 # maximum number of pairs allowed to pass the threshold at once
+                          # (confirmed empirically as better than 2 or 4)
+CORR_THRESHOLD = 0.95    # a "rounding" threshold — a pair only counts
+                          # if |correlation| exceeds this; weaker
+                          # signals are discarded entirely (this can
+                          # leave 0 pairs for some stretch — that's
+                          # expected and intentional: backtesting
+                          # confirmed that "bet on nothing" beats
+                          # "bet on a weak, uncertain signal").
+HOT_THRESHOLD_FIXED = 3  # "hot shot" threshold (thickness in 1 draw)
 
 # ============================================================
-#  ГРУПИ (K, R, C) — НЕ ЗМІНЮВАТИ
+#  GROUPS (K, R, C) — DO NOT CHANGE
 # ============================================================
 
 K_GROUPS = {
@@ -112,12 +113,13 @@ for gname, nums in ALL_GROUPS.items():
     for n in nums:
         NUM_TO_GROUPS[n].append(gname)
 GROUP_NAMES = list(ALL_GROUPS.keys())
-# пари груп, що НЕ перетинаються фізично (щоб не переплутати з артефактом підмножини)
+# pairs of groups that do NOT physically overlap (to avoid confusing a
+# result with a subset artifact)
 DISJOINT_PAIRS = [(g1, g2) for g1, g2 in combinations(GROUP_NAMES, 2)
                    if not (GROUP_SET[g1] & GROUP_SET[g2])]
 
 # ============================================================
-#  КЛАС СТАНУ ГРУПИ
+#  GROUP STATE CLASS
 # ============================================================
 
 class GroupState:
@@ -151,11 +153,12 @@ class GroupState:
 
 
 # ============================================================
-#  ЖИВА ПЕРЕКАЛІБРОВКА ПРАВИЛ
+#  LIVE RULE RECALIBRATION
 # ============================================================
 
 def hit_series(gname, draws_slice):
-    """0/1 ряд: чи є хоч 1 число групи в кожному тиражі зрізу."""
+    """0/1 series: whether at least 1 group member appears in each
+    draw of the slice."""
     s = GROUP_SET[gname]
     return [1 if (s & draws_slice[i]) else 0 for i in range(len(draws_slice))]
 
@@ -173,12 +176,13 @@ def rolling_mean(series, window):
 
 
 def find_top_pairs(calib_draws_sets, n_top=N_TOP_PAIRS, threshold=CORR_THRESHOLD):
-    """Знайти найсильніші НЕГАТИВНО корельовані (опозитні) пари груп
-    на заданому зрізі тиражів, "округлюючи" (відкидаючи) усе слабше
-    за `threshold`. Повертає список (X, Y) обома напрямками: якщо
-    X=0 -> бонус Y. Може повернути порожній список — це навмисно:
-    коли жоден сигнал не досяг порогу впевненості, краще нічого не
-    ставити, ніж покладатись на слабку, невпевнену пару."""
+    """Find the strongest NEGATIVELY correlated (opposite) group pairs
+    on the given slice of draws, "rounding off" (discarding) anything
+    weaker than `threshold`. Returns a list of (X, Y) in both
+    directions: if X=0 -> bonus for Y. May return an empty list — this
+    is intentional: when no signal reaches the confidence threshold,
+    it's better to bet on nothing than to rely on a weak, uncertain
+    pair."""
     corr_win = max(5, len(calib_draws_sets) // 3)
     rolls = {g: rolling_mean(hit_series(g, calib_draws_sets), corr_win) for g in GROUP_NAMES}
 
@@ -199,10 +203,10 @@ def find_top_pairs(calib_draws_sets, n_top=N_TOP_PAIRS, threshold=CORR_THRESHOLD
         corr = cov / math.sqrt(vx * vy)
         if corr != corr:  # NaN guard
             continue
-        if corr < -threshold:   # "округлення": лишаємо тільки впевнено негативні
+        if corr < -threshold:   # "rounding": keep only confidently negative
             pair_corrs.append((g1, g2, corr))
 
-    pair_corrs.sort(key=lambda x: x[2])  # найнегативніші перші
+    pair_corrs.sort(key=lambda x: x[2])  # most negative first
     pairs = []
     for g1, g2, c in pair_corrs[:n_top]:
         pairs.append((g1, g2))
@@ -211,15 +215,15 @@ def find_top_pairs(calib_draws_sets, n_top=N_TOP_PAIRS, threshold=CORR_THRESHOLD
 
 
 def evaluate_window_choice(draws_sets, end_idx, window, lookback, pool=TOP_N):
-    """Ретроспективно перевірити: якби перекалібровувались щоразу
-    вікном `window` протягом останніх `lookback` тиражів (закінчуючи
-    на end_idx), який середній хіт-рейт це дало б? Використовується
-    для адаптивного вибору розміру вікна (як мотори A/Б)."""
+    """Retrospectively check: if recalibration had used window `window`
+    throughout the last `lookback` draws (ending at end_idx), what
+    average hit-rate would that have given? Used for adaptively
+    choosing the window size (as in the Motor A/B experiments)."""
     start = max(window, end_idx - lookback)
     if end_idx - start < window:
         return 0.0, 0
     states = {g: GroupState(GROUP_SIZE[g]) for g in GROUP_NAMES}
-    # прогріваємо стан від початку історії до start (без запису хітів)
+    # warm up the state from the start of history up to `start` (without recording hits)
     for i in range(0, start):
         for g in GROUP_NAMES:
             draw_in_g = [x for x in draws_sets[i] if x in GROUP_SET[g]]
@@ -254,15 +258,16 @@ def choose_best_window(draws_sets, end_idx, candidate_windows, lookback):
 
 
 # ============================================================
-#  ПОВІЛЬНИЙ МОНІТОР ЗСУВУ БАЛАНСУ (окремо від швидкого вікна=10)
+#  SLOW BALANCE-SHIFT MONITOR (separate from the fast window=10)
 # ============================================================
-#  Швидке вікно (RECALIB_WINDOW=10) ловить миттєвий стан, але не
-#  показує сам факт, що сила конкретної пари системно зростає чи
-#  спадає протягом місяців (див. довідку: C3-K10 послабшала в
-#  квітні 2026, C2-C6 різко посилилась у липні-серпні 2026). Ця
-#  функція рахує ту саму умовну різницю (X=0 -> бонус Y), але на
-#  повільному вікні (SLOW_WINDOW=100) і порівнює з попереднім таким
-#  самим вікном, щоб показати НАПРЯМОК зміни сили правила в часі.
+#  The fast window (RECALIB_WINDOW=10) catches the instantaneous
+#  state, but doesn't show the fact that a specific pair's strength
+#  is systematically rising or falling over months (see the reference
+#  doc: C3-K10 weakened in April 2026, C2-C6 sharply strengthened in
+#  July-August 2026). This function computes the same conditional
+#  difference (X=0 -> bonus for Y), but on a slow window
+#  (SLOW_WINDOW=100), and compares it to the previous such window, to
+#  show the DIRECTION of change in the rule's strength over time.
 
 def conditional_diff(x_gname, y_gname, draws_sets):
     x_hit = hit_series(x_gname, draws_sets)
@@ -275,9 +280,9 @@ def conditional_diff(x_gname, y_gname, draws_sets):
 
 
 def slow_balance_monitor(draws_sets, end_idx, pairs_to_watch, slow_window=SLOW_WINDOW):
-    """Для кожної пари (X,Y) з pairs_to_watch: порахувати силу
-    правила X->Y на двох послідовних повільних вікнах (щойно
-    минулому і тому, що перед ним), і показати напрямок зміни."""
+    """For each pair (X,Y) in pairs_to_watch: compute the strength of
+    the rule X->Y on two consecutive slow windows (the one just past,
+    and the one before it), and show the direction of change."""
     results = []
     recent_start = max(0, end_idx - slow_window)
     prior_start = max(0, end_idx - 2 * slow_window)
@@ -294,7 +299,7 @@ def slow_balance_monitor(draws_sets, end_idx, pairs_to_watch, slow_window=SLOW_W
 
 
 # ============================================================
-#  СКОРИНГ
+#  SCORING
 # ============================================================
 
 def compute_group_scores(states, pairs, hot_threshold, c3_bias):
@@ -318,32 +323,33 @@ def compute_number_scores(group_scores):
 
 
 # ============================================================
-#  БЕКТЕСТ З ЖИВОЮ ПЕРЕКАЛІБРОВКОЮ
+#  BACKTEST WITH LIVE RECALIBRATION
 # ============================================================
 
 def run_backtest(draws, n_backtest, top_n, tie_breaker, c3_bias):
     total = len(draws)
     eval_start = total - n_backtest
     if eval_start < 0:
-        raise ValueError("n_backtest більше за кількість тиражів")
+        raise ValueError("n_backtest is larger than the number of draws")
 
     draws_sets = [set(d) for d in draws]
     states = {name: GroupState(GROUP_SIZE[name]) for name in ALL_GROUPS}
     hit_counts = []
     windows_used = []
-    details = []  # (індекс, фактичний тираж, прогнозований пул, к-сть влучань)
+    details = []  # (index, actual draw, predicted pool, hit count)
 
     current_window = RECALIB_WINDOW
     current_pairs = []
     next_recalib_idx = -1
 
     for i, draw_numbers in enumerate(draws):
-        # --- перекалібровка пар — ЗАВЖДИ на абсолютному розкладі (0, RECALIB_STEP, 2*RECALIB_STEP, ...)
-        # ВАЖЛИВО: винесено з-під "if i >= eval_start", щоб розклад перекалібровок
-        # не залежав від n_backtest. Інакше для тих самих останніх тиражів
-        # current_pairs (а отже й прогноз) відрізнявся б залежно від того,
-        # яку глибину бектесту (n_backtest) вибрали — та сама помилка, що
-        # була знайдена й виправлена в step3_combined.py.
+        # --- pair recalibration — ALWAYS on an absolute schedule (0, RECALIB_STEP, 2*RECALIB_STEP, ...)
+        # IMPORTANT: pulled out from under "if i >= eval_start" so that the
+        # recalibration schedule doesn't depend on n_backtest. Otherwise, for
+        # the same final draws, current_pairs (and hence the prediction)
+        # would differ depending on which backtest depth (n_backtest) was
+        # chosen — the same bug that was found and fixed in
+        # step3_combined.py.
         if i >= next_recalib_idx:
             current_pairs = find_top_pairs(draws_sets[max(0, i - current_window):i], N_TOP_PAIRS)
             next_recalib_idx = i + RECALIB_STEP
@@ -375,14 +381,14 @@ def run_backtest(draws, n_backtest, top_n, tie_breaker, c3_bias):
 
 
 def print_last_n_steps(details, n=20):
-    print(f"\n--- Покроковий результат по останніх {min(n, len(details))} тиражах ---")
+    print(f"\n--- Step-by-step result for the last {min(n, len(details))} draws ---")
     for idx, actual, predicted, hits in details[-n:]:
         matched = sorted(set(actual) & set(predicted))
-        print(f"  #{idx}: тираж={actual} | прогноз={predicted} | влучило={matched} ({hits})")
+        print(f"  #{idx}: draw={actual} | predicted={predicted} | matched={matched} ({hits})")
 
 
 # ============================================================
-#  СТАТИСТИКА ТА ВИВІД
+#  STATISTICS AND OUTPUT
 # ============================================================
 
 def comb(n, k):
@@ -400,29 +406,29 @@ def theoretical_distribution(total_draws, pool_size=8, draw_size=6, N=49):
 
 
 def print_results(hit_counts, windows_used, total_draws_eval, top_n=8, c3_bias=0.0):
-    print(f"Оцінено тиражів: {total_draws_eval}")
-    print(f"Середня кількість влучань: {sum(hit_counts)/total_draws_eval:.4f}")
+    print(f"Draws evaluated: {total_draws_eval}")
+    print(f"Average hit count: {sum(hit_counts)/total_draws_eval:.4f}")
 
     from collections import Counter
     bins = Counter(hit_counts)
-    print("\nРозподіл влучань:")
+    print("\nHit distribution:")
     for k in range(max(bins.keys(), default=0) + 1):
-        print(f"  {k} влучань: {bins.get(k, 0)}")
+        print(f"  {k} hits: {bins.get(k, 0)}")
 
 
 def print_last_n_steps(details, n=20):
     hits_list = [d[3] for d in details[-100:]]
-    print(f"\nОстанні {len(hits_list)} тиражів (влучання по порядку): " + ", ".join(str(h) for h in hits_list))
+    print(f"\nLast {len(hits_list)} draws (hits in order): " + ", ".join(str(h) for h in hits_list))
 
 
 
 # ============================================================
-#  ЖИВИЙ ПРОГНОЗ (forward-test — прогноз на НАСТУПНИЙ, ще не
-#  відомий тираж, замість бектесту на минулому)
+#  LIVE FORECAST (forward test — a prediction for the NEXT, not-yet-
+#  known draw, instead of a backtest on the past)
 # ============================================================
 
-# Пари, за якими стежить повільний монітор (базові підтверджені +
-# нові з довідки, що варто тримати в полі зору)
+# Pairs watched by the slow monitor (baseline confirmed pairs + new
+# ones from the reference doc worth keeping an eye on)
 WATCH_PAIRS = [('C3', 'K10'), ('C2', 'C6'), ('K6', 'R7')]
 
 def live_forecast(draws, top_n, tie_breaker, c3_bias):
@@ -434,7 +440,7 @@ def live_forecast(draws, top_n, tie_breaker, c3_bias):
             drawn_in_group = [x for x in draw_numbers if x in nums_set]
             states[gname].update(len(drawn_in_group), drawn_in_group)
 
-    # швидка перекалібровка (як у бектесті) — на останньому RECALIB_WINDOW
+    # fast recalibration (as in the backtest) — on the last RECALIB_WINDOW
     pairs = find_top_pairs(draws_sets[max(0, N - RECALIB_WINDOW):N], N_TOP_PAIRS)
     group_scores = compute_group_scores(states, pairs, HOT_THRESHOLD_FIXED, c3_bias)
     num_scores = compute_number_scores(group_scores)
@@ -447,24 +453,24 @@ def live_forecast(draws, top_n, tie_breaker, c3_bias):
 
     predicted = sorted(n for n, _ in top_numbers)
 
-    print(f"Швидкі правила (вікно={RECALIB_WINDOW}): {pairs[:len(pairs)//2] if pairs else '(не знайдено)'}")
-    print(f"ПРОГНОЗНИЙ ПУЛ ({top_n} чисел): {predicted}")
+    print(f"Fast rules (window={RECALIB_WINDOW}): {pairs[:len(pairs)//2] if pairs else '(none found)'}")
+    print(f"PREDICTION POOL ({top_n} numbers): {predicted}")
 
-    print(f"\nПовільний монітор балансу (вікно={SLOW_WINDOW}, поточне vs попереднє):")
+    print(f"\nSlow balance monitor (window={SLOW_WINDOW}, current vs. previous):")
     monitor = slow_balance_monitor(draws_sets, N, WATCH_PAIRS, SLOW_WINDOW)
     for x, y, prior, recent, trend in monitor:
         if trend is None:
-            print(f"  {x}->{y}: недостатньо даних для порівняння")
+            print(f"  {x}->{y}: not enough data to compare")
             continue
-        arrow = "посилюється" if trend > 2 else ("слабшає" if trend < -2 else "стабільно")
-        print(f"  {x}->{y}: попереднє вікно={prior:+.1f}п.п., поточне={recent:+.1f}п.п., "
-              f"зміна={trend:+.1f}п.п. ({arrow})")
+        arrow = "strengthening" if trend > 2 else ("weakening" if trend < -2 else "stable")
+        print(f"  {x}->{y}: previous window={prior:+.1f}pp, current={recent:+.1f}pp, "
+              f"change={trend:+.1f}pp ({arrow})")
 
     return predicted
 
 
 # ============================================================
-#  ЧИТАННЯ CSV
+#  CSV READING
 # ============================================================
 
 def read_csv(filename, filter_new_mode=False, start_date_str=None, end_date_str=None):
@@ -475,12 +481,12 @@ def read_csv(filename, filter_new_mode=False, start_date_str=None, end_date_str=
         try:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
         except Exception:
-            print(f"Попередження: не вдалося розпарсити дату {start_date_str}, фільтр вимкнено.")
+            print(f"Warning: could not parse date {start_date_str}, filter disabled.")
     if end_date_str:
         try:
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
         except Exception:
-            print(f"Попередження: не вдалося розпарсити кінцеву дату {end_date_str}.")
+            print(f"Warning: could not parse end date {end_date_str}.")
 
     try:
         with open(filename, 'r', encoding='utf-8') as f:
@@ -503,19 +509,19 @@ def read_csv(filename, filter_new_mode=False, start_date_str=None, end_date_str=
                         continue
                     draws.append(nums)
     except FileNotFoundError:
-        print(f"Помилка: файл '{filename}' не знайдено.")
+        print(f"Error: file '{filename}' not found.")
         sys.exit(1)
     except Exception as e:
-        print(f"Помилка читання файлу: {e}")
+        print(f"Error reading file: {e}")
         sys.exit(1)
 
     if not draws:
-        print("Увага: не прочитано жодного тиражу. Перевірте формат файлу.")
+        print("Warning: no draws were read. Check the file format.")
     return draws
 
 
 # ============================================================
-#  ГОЛОВНА
+#  MAIN
 # ============================================================
 
 def main():
@@ -524,23 +530,23 @@ def main():
         return
 
     if BACKTEST_ANCHOR_DATE:
-        # обрізає лише КІНЕЦЬ (для відтворюваності між днями) — початок
-        # завжди 27.01.2026, тренування/калібрування не обрізається
+        # trims only the END (for reproducibility across days) — the
+        # start is always 2026-01-27; training/calibration data isn't trimmed
         draws_bt = read_csv(CSV_FILE, USE_NEW_MODE_ONLY, NEW_MODE_START, BACKTEST_ANCHOR_DATE)
-        print(f"Бектест зафіксовано на даті <= {BACKTEST_ANCHOR_DATE} ({len(draws_bt)} тиражів, "
-              f"тренування з {NEW_MODE_START})")
+        print(f"Backtest pinned to date <= {BACKTEST_ANCHOR_DATE} ({len(draws_bt)} draws, "
+              f"training from {NEW_MODE_START})")
     else:
         draws_bt = draws_full
 
-    # --- 1. БЕКТЕСТ ---
-    print("=== БЕКТЕСТ ===")
+    # --- 1. BACKTEST ---
+    print("=== BACKTEST ===")
     n_backtest = min(N_BACKTEST, len(draws_bt))
     hit_counts, windows_used, details = run_backtest(draws_bt, n_backtest, TOP_N, TIE_BREAKER, C3_BIAS_WEIGHT)
     print_results(hit_counts, windows_used, len(hit_counts), TOP_N, C3_BIAS_WEIGHT)
     print_last_n_steps(details, SHOW_LAST_N)
 
-    # --- 2. ЖИВИЙ ПРОГНОЗ (завжди на повних, найсвіжіших даних) ---
-    print("\n=== ЖИВИЙ ПРОГНОЗ ===")
+    # --- 2. LIVE FORECAST (always on the full, most recent data) ---
+    print("\n=== LIVE FORECAST ===")
     live_forecast(draws_full, TOP_N, TIE_BREAKER, C3_BIAS_WEIGHT)
 
 
